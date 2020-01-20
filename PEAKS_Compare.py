@@ -13,6 +13,7 @@ total_peptides = []
 unique_peptides = []
 peptide_dict = {}
 protein_dict = {}
+total_proteins = []
 unique_proteins = []
 
 
@@ -61,11 +62,14 @@ def get_proteins(file_list, label_list):
         file = file_list[i]
         label = label_list[i]
         df = pd.read_csv(file)
+        total_prot = df["Protein Accession"].tolist()
         df = df[df.Unique == "Y"].drop_duplicates(subset="Protein Accession")
         proteins = df["Protein Accession"].tolist()
 
         global protein_dict
         protein_dict[label] = set(proteins)
+        global total_proteins
+        total_proteins.append(len(set(total_prot)))
         global unique_proteins
         unique_proteins.append(len(list(set(proteins))))
 
@@ -111,8 +115,9 @@ def plot_peptide_upset(peptide_dict):
 
 def plot_proteins(unique_proteins, labels):
     fig, ax = plt.subplots(figsize=(10, 5))
-    plot_df = pd.DataFrame({"Unique Proteins": unique_proteins}, index=labels)
-    plot_df.plot.bar(y="Unique Proteins", rot=0, fontsize=13, legend=None, ax=ax)
+    plot_df = pd.DataFrame({"Total Proteins": total_proteins,
+                            "Unique Proteins": unique_proteins}, index=labels)
+    plot_df.plot.bar(rot=0, fontsize=13, legend=None, ax=ax)
 
     y_max, difference = plt.yticks()[0][-1], plt.yticks()[0][-1]-plt.yticks()[0][-2]
 
@@ -265,6 +270,8 @@ def plot_retention(file_list):
     else:
         n_cols = 3
         n_rows = len(hists) // n_cols
+        if len(hists) > n_cols * n_rows:
+            n_rows += 1
     fig, ax = plt.subplots(n_rows, n_cols, figsize=(15, 10), sharey=True, sharex=True)
     colors = [plt.cm.viridis(i/float(25-1), alpha=0.75) for i in range(25)]
 
@@ -286,6 +293,8 @@ def plot_retention(file_list):
         i = 0
         for r in range(n_rows):
             for c in range(n_cols):
+                if i > len(hists)-1:
+                    break
                 x = hists[i].keys()
                 y = hists[i].values()
                 ax1 = ax[r][c]
@@ -311,6 +320,10 @@ def output_file():
             f.write(str(sample)+": "+str(num)+"\n")
         f.write("\n")
         f.write("Total proteins identified:" + "\n")
+        for sample, num in zip(labels, total_proteins):
+            f.write(str(sample)+": "+str(num)+"\n")
+        f.write("\n")
+        f.write("Unique proteins identified:" + "\n")
         for sample, num in zip(labels, unique_proteins):
             f.write(str(sample)+": "+str(num)+"\n")
 
